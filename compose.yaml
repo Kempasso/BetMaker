@@ -3,9 +3,104 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      topics:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    networks:
+      - bet_network
+    command: uvicorn src.main:app --host 0.0.0.0 --workers 4
+
+
+  postgres:
+    image: postgres:14
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_DB: $POSTGRES_DB
+    networks:
+      - bet_network
+
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: alembic upgrade head
+    networks:
+      - bet_network
 
   kafka:
-    image: wurstmeister/kafka
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_KRAFT_MODE: "true"
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: "Mk3OEYBSD34fcwNTJENDM2Qk"
+    volumes:
+      - ./data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD-SHELL", "/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1" ]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks:
+      - bet_network
 
-  zookeeper:
-    image: wurstmeister/zookeeper
+  topics:
+    image: apache/kafka
+    container_name: bet-topics-maker
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./conf/kafka/:/conf/kafka/
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+
+      echo -e 'Creating kafka topics'
+      bash /conf/kafka/create-topics.sh
+
+      echo -e 'Successfully created the following topics:'
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+      "
+    networks:
+      - bet_network
+
+
+volumes:
+  bet-kafka-data:
+    name: "bet-kafka-data"
+  bet-kafka-secrets:
+    name: "bet-kafka-secrets"
+
+networks:
+  bet_network:
+    name: "bet_network"
+    driver: bridge
