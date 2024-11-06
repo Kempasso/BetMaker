@@ -21,7 +21,7 @@ Get all bets
 
 **POST /api/v1/bet/**
 ```
-Get all bets
+Make bet
 ```
 
 #### TODO: 
