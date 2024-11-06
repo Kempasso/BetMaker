@@ -1,4 +1,9 @@
 # BetMaker
+
+*!NOTE!: This service must be started first!*
+
+*Next, start the microservice https://github.com/Kempasso/LineProvider*
+
 *.env файл специально оставлен в гите чтобы не делать доп действия с envexampe и тд)*
 
 ### Run docker compose:
