@@ -21,6 +21,7 @@ async def event_update_listener():
         async for message in consumer:
             print(message)
             decoded_data = message.value.decode()
+            print(f"{decoded_data=}")
             async with make_session() as session:
                 try:
                     changes_info = UpdateEvent.model_validate_json(decoded_data)

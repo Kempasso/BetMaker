@@ -19,7 +19,15 @@ async def make_bet(
     bet = await manager.bets.make_bet(bet_info)
     return bet
 
+#sudo docker compose -f compose.yaml core_backend up --build -d
 
 @router.get("/bets")
-async def get_filtered_bets():
-    return {"bets": ""}
+async def get_filtered_bets(
+    manager: Annotated[
+        ServiceManager,
+        Depends(get_service_manager)
+    ]
+) -> list[BetResponse]:
+
+    bets = await manager.bets.get_bets()
+    return bets

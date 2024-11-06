@@ -14,7 +14,9 @@ class BetsController(BaseController):
         repo = DBStorage(Bet, self.session)
         return await repo.create(**bet_info.model_dump())
 
-    async def get_bet(self):
+    async def get_bets(self):
         repo = DBStorage(Bet, self.session)
+        return await repo.get()
+
 
 
