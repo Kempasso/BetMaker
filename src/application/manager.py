@@ -29,11 +29,8 @@ class ServiceManager:
 
 
 async def get_service_manager():
-    print(1)
     async with server.session_factory() as session:
-        print(2)
         manager = ServiceManager(session)
-        print(3)
         try:
             yield manager
             await manager.commit()

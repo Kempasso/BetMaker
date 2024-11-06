@@ -15,5 +15,4 @@ class EventsController(BaseController):
         return await self._make_request(action=action)
 
     async def _make_request(self, action):
-        print("make request")
         return await self.mediator.remote_call(action=action)

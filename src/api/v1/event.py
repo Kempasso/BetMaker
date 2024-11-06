@@ -15,6 +15,5 @@ async def all_events(
         Depends(get_service_manager)
     ]
 ) -> list[Event]:
-    print("here")
     events = await manager.events.get_events()
     return events

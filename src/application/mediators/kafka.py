@@ -19,9 +19,7 @@ async def event_update_listener():
     await consumer.start()
     try:
         async for message in consumer:
-            print(message)
             decoded_data = message.value.decode()
-            print(f"{decoded_data=}")
             async with make_session() as session:
                 try:
                     changes_info = UpdateEvent.model_validate_json(decoded_data)
@@ -52,14 +50,12 @@ class KafkaBroker:
         request.update(service=service, action=action)
         if wait_response:
             task = asyncio.create_task(self._send_request(request))
-            print(task)
             for tick in range(900):
                 if task.done():
                     break
                 await asyncio.sleep(0.1)
             else:
                 task.cancel()
-            print(task.result())
             return task.result()
         else:
             await self._send_request_nowait(request)
@@ -68,7 +64,6 @@ class KafkaBroker:
         topic = await self._make_read_topic(request['service'])
         try:
             request_key = await self._send_request_nowait(request)
-            print(f"{request_key=}")
         except Exception as e:
             print(e)
         consumer = AIOKafkaConsumer(
@@ -76,14 +71,11 @@ class KafkaBroker:
         )
         await consumer.start()
         try:
-            print("before async for")
             async for message in consumer:
 
                 key = message.key.decode()
-                print(f"{key=}")
                 if request_key == key:
                     data = json.loads(message.value.decode())
-                    print(f"{data=}")
                     return data
         finally:
             await consumer.stop()
@@ -98,14 +90,11 @@ class KafkaBroker:
         )
         try:
             await producer.start()
-            print("before send")
             await producer.send(
                 topic, serialized_req, key=request_key.encode()
             )
-            print("after send")
             return request_key
         except Exception as e:
-            print("Error in _send_request_nowait")
             print(e)
         finally:
             await producer.stop()
